@@ -18,8 +18,8 @@ var models = require('./models');
 
 //client id and client secret here, taken from .env
 dotenv.load();
-var INSTAGRAM_CLIENT_ID = process.env.INSTAGRAM_CLIENT_ID;
-console.log(process.env.instagram_client_id);
+var INSTAGRAM_CLIENT_ID = process.env.instagram_client_id;
+console.log(INSTAGRAM_CLIENT_ID);
 var INSTAGRAM_CLIENT_SECRET = process.env.INSTAGRAM_CLIENT_SECRET;
 var INSTAGRAM_CALLBACK_URL = process.env.INSTAGRAM_CALLBACK_URL;
 var INSTAGRAM_ACCESS_TOKEN = "";
