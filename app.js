@@ -143,13 +143,14 @@ app.get('/browse', ensureAuthenticated, function(req, res) {
 
             if (user_names.indexOf(user.name) != -1) {
               // current user is tagged in the photo
-              console.log("gotcha");
+              // console.log("gotcha");
               //create temporary json object
               tempJSON = {};
               tempJSON.url = item.images.low_resolution.url;
               //insert json object into image array
               return tempJSON;
             } else {
+              // TODO: Probably better to not put null items in array. Then also remove handling of null items in browse.handlebars
               return null;
             }
             
@@ -161,6 +162,10 @@ app.get('/browse', ensureAuthenticated, function(req, res) {
   });
 });
 
+
+app.get('/favorites', function(req, res) {
+  res.render('favorites');
+});
 
 
 

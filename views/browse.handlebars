@@ -1,6 +1,8 @@
 <div class="row" style="margin-top: 3px">
 {{#each photos}}
+  {{#if url}}
   <div class="col s3" style="padding: 5px"><div class="image"><img src="{{url}}" alt="" class="img responsive-img"></div></div>
+  {{/if}}
 {{/each}}
   
 </div>
