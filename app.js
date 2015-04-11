@@ -25,7 +25,7 @@ var INSTAGRAM_ACCESS_TOKEN = "";
 Instagram.set('client_id', INSTAGRAM_CLIENT_ID);
 Instagram.set('client_secret', INSTAGRAM_CLIENT_SECRET);
 
-// TODO: Reenable
+
 //connect to database
 mongoose.connect(process.env.MONGODB_CONNECTION_URL);
 var db = mongoose.connection;
@@ -78,7 +78,7 @@ passport.use(new InstagramStrategy({
           // and return that user instead.
           return done(null, profile);
         });
-      })
+      });
     });
   }
 ));
@@ -114,40 +114,9 @@ function ensureAuthenticated(req, res, next) {
 }
 
 //routes
+// TODO: Should the site always redirect to /browse or shoul the "Browse all" view be the top level view
 app.get('/', function(req, res){
   res.redirect('/browse');
-});
-
-app.get('/login', function(req, res){
-  res.render('login', { user: req.user });
-});
-
-app.get('/account', ensureAuthenticated, function(req, res){
-  res.render('account', {user: req.user});
-});
-
-app.get('/photos', ensureAuthenticated, function(req, res){
-  var query  = models.User.where({ name: req.user.username });
-  query.findOne(function (err, user) {
-    if (err) return handleError(err);
-    if (user) {
-      // doc may be null if no document matched
-      Instagram.users.liked_by_self({
-        access_token: user.access_token,
-        complete: function(data) {
-          //Map will iterate through the returned data obj
-          var imageArr = data.map(function(item) {
-            //create temporary json object
-            tempJSON = {};
-            tempJSON.url = item.images.low_resolution.url;
-            //insert json object into image array
-            return tempJSON;
-          });
-          res.render('photos', {photos: imageArr});
-        }
-      }); 
-    }
-  });
 });
 
 
@@ -183,16 +152,8 @@ app.get('/browse', ensureAuthenticated, function(req, res) {
             } else {
               return null;
             }
-            // console.log("next item:");
-            // // TODO: Check other users in photo
-            // console.log(item.users_in_photo[0]);
-            // console.log("-");
-            // console.log("-");
-            // console.log("-");
-
             
           });
-          // res.render('photos', {photos: imageArr});
           res.render('browse', {photos: imageArr});
         }
       });
@@ -228,6 +189,7 @@ app.get('/auth/instagram/callback',
     res.redirect('/accounts');
   });
 
+// TODO - low prio: Maybe handle directly after button call, without redirecting
 app.get('/logout', function(req, res){
   req.logout();
   res.redirect('/accounts');
