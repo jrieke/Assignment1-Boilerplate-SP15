@@ -25,6 +25,7 @@ var INSTAGRAM_ACCESS_TOKEN = "";
 Instagram.set('client_id', INSTAGRAM_CLIENT_ID);
 Instagram.set('client_secret', INSTAGRAM_CLIENT_SECRET);
 
+// TODO: Reenable
 //connect to database
 mongoose.connect(process.env.MONGODB_CONNECTION_URL);
 var db = mongoose.connection;
@@ -60,6 +61,7 @@ passport.use(new InstagramStrategy({
   },
   function(accessToken, refreshToken, profile, done) {
     // asynchronous verification, for effect...
+
     models.User.findOrCreate({
       "name": profile.username,
       "id": profile.id,
@@ -148,6 +150,50 @@ app.get('/photos', ensureAuthenticated, function(req, res){
 });
 
 
+app.get('/all', ensureAuthenticated, function(req, res) {
+  var query = models.User.where({name: req.user.username});
+  query.findOne(function(err, user) {
+    if (err) return handleError(err);
+    if (user) {
+      Instagram.users.self({
+        access_token: user.access_token,
+        complete: function(data) {
+          //Map will iterate through the returned data obj
+          var imageArr = data.map(function(item) {
+            // TODO: Maybe use positon of tag and show an overlay on the photo
+            var user_names = item.users_in_photo.map(function(user_item) {
+              return user_item.user.username;
+            });
+            // console.log(user_names);
+
+            if (user_names.indexOf(user.name) != -1) {
+              // current user is tagged in the photo
+              console.log("gotcha");
+              //create temporary json object
+              tempJSON = {};
+              tempJSON.url = item.images.low_resolution.url;
+              //insert json object into image array
+              return tempJSON;
+            } else {
+              return null;
+            }
+            // console.log("next item:");
+            // // TODO: Check other users in photo
+            // console.log(item.users_in_photo[0]);
+            // console.log("-");
+            // console.log("-");
+            // console.log("-");
+
+            
+          });
+          res.render('photos', {photos: imageArr});
+        }
+      });
+    }
+  });
+});
+
+
 // GET /auth/instagram
 //   Use passport.authenticate() as route middleware to authenticate the
 //   request.  The first step in Instagram authentication will involve
@@ -168,7 +214,7 @@ app.get('/auth/instagram',
 app.get('/auth/instagram/callback', 
   passport.authenticate('instagram', { failureRedirect: '/login'}),
   function(req, res) {
-    res.redirect('/account');
+    res.redirect('/all');
   });
 
 app.get('/logout', function(req, res){
