@@ -109,12 +109,13 @@ function ensureAuthenticated(req, res, next) {
   if (req.isAuthenticated()) { 
     return next(); 
   }
-  res.redirect('/login');
+  // TODO: Handle situation if no account is connected
+  res.render('no_content');
 }
 
 //routes
 app.get('/', function(req, res){
-  res.render('login');
+  res.redirect('/browse');
 });
 
 app.get('/login', function(req, res){
@@ -150,7 +151,12 @@ app.get('/photos', ensureAuthenticated, function(req, res){
 });
 
 
-app.get('/all', ensureAuthenticated, function(req, res) {
+app.get('/accounts', function(req, res) {
+  res.render('accounts', {instagram_user: req.user});
+});
+
+
+app.get('/browse', ensureAuthenticated, function(req, res) {
   var query = models.User.where({name: req.user.username});
   query.findOne(function(err, user) {
     if (err) return handleError(err);
@@ -186,12 +192,16 @@ app.get('/all', ensureAuthenticated, function(req, res) {
 
             
           });
-          res.render('photos', {photos: imageArr});
+          // res.render('photos', {photos: imageArr});
+          res.render('browse', {photos: imageArr});
         }
       });
     }
   });
 });
+
+
+
 
 
 // GET /auth/instagram
@@ -214,12 +224,13 @@ app.get('/auth/instagram',
 app.get('/auth/instagram/callback', 
   passport.authenticate('instagram', { failureRedirect: '/login'}),
   function(req, res) {
-    res.redirect('/all');
+    // TODO: Redirect to previous page
+    res.redirect('/accounts');
   });
 
 app.get('/logout', function(req, res){
   req.logout();
-  res.redirect('/');
+  res.redirect('/accounts');
 });
 
 http.createServer(app).listen(app.get('port'), function() {
