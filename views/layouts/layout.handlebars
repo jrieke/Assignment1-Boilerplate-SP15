@@ -24,12 +24,19 @@
     <nav>
       <div class="nav-wrapper amber darken-1">
         <!-- TODO: Logo or site name -->
-        <span class="brand-logo" style="left: 20px">All My Pics</span>
-        <ul id="nav-mobile" class="right hide-on-med-and-down">
-          <li><a href="/browse">Browse all<i class="mdi-action-view-module left"></i></a></li>
-          <li><a href="/favorites">Favorites<i class="mdi-action-favorite left"></i></a></li>
-          <li><a href="/accounts">Accounts<i class="mdi-social-people left"></i></a></li>
+        <span class="brand-logo center">All My Pics</span>
+        <a href="#" data-activates="mobile-nav" class="button-collapse"><i class="mdi-navigation-menu"></i></a>
+        <ul class="right hide-on-med-and-down">
+          <li><a href="/browse"><i class="mdi-action-view-module left"></i>Browse all</a></li>
+          <li><a href="/favorites"><i class="mdi-action-favorite left"></i>Favorites</a></li>
+          <li><a href="/accounts"><i class="mdi-social-people left"></i>Accounts</a></li>
         </ul>
+        <ul class="side-nav" id="mobile-nav">
+          <li><a href="/browse"><i class="mdi-action-view-module left"></i>Browse all</a></li>
+          <li><a href="/favorites"><i class="mdi-action-favorite left"></i>Favorites</a></li>
+          <li><a href="/accounts"><i class="mdi-social-people left"></i>Accounts</a></li>
+        </ul>
+
       </div>
     </nav>
   </div>
@@ -38,6 +45,12 @@
     
     <script src="https://code.jquery.com/jquery.js"></script>
     <script src="js/materialize.min.js"></script>
+
+    <script type="text/javascript">
+      $(document).ready(function(){
+         $(".button-collapse").sideNav();
+      });
+    </script>
 </body>
 </html>
 
