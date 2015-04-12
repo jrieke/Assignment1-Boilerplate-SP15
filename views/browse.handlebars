@@ -1,19 +1,24 @@
 <div style="padding: 7px">
   <!-- grid of responsive square images, adapted from http://stackoverflow.com/questions/20456694/grid-of-responsive-squares -->
   {{#each photos}}
-    {{#if url}}
-    <div class="square" style="background-image: url('{{url}}')">
+    <div class="square" style="background-image: url('{{image_url}}')">
       <div class="overlay"></div>
       <!-- TODO: Add content here and see which classes can be removed from grid.css -->
-      <!-- <div class="content">
-        <div class="table">
-          <div class="table-cell">
-            centered content
+        <div class="content">
+          <div class="table">
+            <div class="table-cell">
+            {{#if caption}}
+              <p>{{from}} on {{month}}/{{day}}/{{year}}:</p>
+              <h5>{{caption}}</h5>
+            {{else}}
+              <h5>{{from}} on {{month}}/{{day}}/{{year}}</h5>
+            {{/if}}
+              <p><a href="{{link}}">Watch on {{provider}}</a></p>
+            </div>
           </div>
         </div>
-      </div> -->
+      </a>
     </div>
-    {{/if}}
   {{/each}}
 </div>
   

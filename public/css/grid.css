@@ -9,6 +9,7 @@
     background-position: center center;
     background-repeat: no-repeat;
     background-size: cover; /* you change this to "contain" if you don't want the images to be cropped */
+    overflow: hidden;
 }
 
 .square:hover > .overlay {   
@@ -29,11 +30,11 @@
 
 .content {
     position: absolute;
-    height: 90%; /* = 100% - 2*5% padding */
-    width: 90%; /* = 100% - 2*5% padding */
+    height: 100%; /* = 100% - 2*5% padding */
+    width: 100%; /* = 100% - 2*5% padding */
     padding: 5%;
     opacity: 0;
-    color: red;
+    color: white;
 }
 
 .table {
@@ -44,6 +45,7 @@
 .table-cell {
     display: table-cell;
     vertical-align: middle;
+    text-align: center;
 }
 /*  For list */
 /*ul{

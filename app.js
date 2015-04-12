@@ -186,8 +186,10 @@ app.get('/', ensureAuthenticated, function(req, res) {
         Instagram.users.self({
           access_token: user.access_token,
           complete: function(data) {
-            //Map will iterate through the returned data obj
-            var imageArr = data.map(function(item) {
+            var imageArr = [];
+            for (var i = 0; i < data.length; i++) {
+              var item = data[i];
+
               // TODO: Maybe use positon of tag and show an overlay on the photo
               var user_names = item.users_in_photo.map(function(user_item) {
                 return user_item.user.username;
@@ -197,17 +199,35 @@ app.get('/', ensureAuthenticated, function(req, res) {
               if (user_names.indexOf(user.name) != -1) {
                 // current user is tagged in the photo
                 // console.log("gotcha");
-                //create temporary json object
                 tempJSON = {};
-                tempJSON.url = item.images.low_resolution.url;
-                //insert json object into image array
-                return tempJSON;
-              } else {
-                // TODO: Probably better to not put null items in array. Then also remove handling of null items in browse.handlebars
-                return null;
+                tempJSON.image_url = item.images.low_resolution.url;
+                tempJSON.link = item.link;
+                tempJSON.provider = 'Instagram';
+                // console.log("===================");
+                // console.log("ITEM:");
+                // console.log(item);
+                // console.log("-------------------");
+                // console.log("CAPTION:");
+                // console.log(item.caption);
+                // console.log("===================");
+                if (item.caption) {
+                  tempJSON.caption = item.caption.text;
+                } else {
+                  tempJSON.caption = null;
+                }
+                if (item.user.id == user.id) {
+                  tempJSON.from = 'You';
+                } else {
+                  tempJSON.from = item.user.username;
+                }
+                tempJSON.profile_picture = item.user.profile_picture;
+                var date = new Date(parseInt(item.created_time) * 1000);
+                tempJSON.day = date.getDate();
+                tempJSON.month = date.getMonth() + 1;
+                tempJSON.year = date.getFullYear();
+                imageArr.push(tempJSON);
               }
-              
-            });
+            }
             res.render('browse', {photos: imageArr});
           }
         });
@@ -216,31 +236,55 @@ app.get('/', ensureAuthenticated, function(req, res) {
         Facebook.setAccessToken(user.access_token);
 
         Facebook.get('/' + user.id + '/photos', function(err, response) {
-          var imageArr = response.data.map(function(item) {
-            // TODO: Maybe use positon of tag and show an overlay on the photo
-            // var user_names = item.users_in_photo.map(function(user_item) {
-            //   return user_item.user.username;
-            // });
-            // console.log(user_names);
+          var imageArr = [];
+            for (var i = 0; i < response.data.length; i++) {
+              var item = response.data[i];
 
-            // if (user_names.indexOf(user.name) != -1) {
-              // current user is tagged in the photo
-              // console.log("gotcha");
-              //create temporary json object
+              // // TODO: Maybe use positon of tag and show an overlay on the photo
+              // var user_names = item.users_in_photo.map(function(user_item) {
+              //   return user_item.user.username;
+              // });
+              // // console.log(user_names);
 
-              tempJSON = {};
-              tempJSON.url = item.source;
-              //insert json object into image array
-              return tempJSON;
-            // } else {
-            //   // TODO: Probably better to not put null items in array. Then also remove handling of null items in browse.handlebars
-            //   return null;
-            // }
-          });
+              // if (user_names.indexOf(user.name) != -1) {
+                // current user is tagged in the photo
+                // console.log("gotcha");
+                tempJSON = {};
+                tempJSON.image_url = item.source;
+                tempJSON.link = item.link;
+                tempJSON.provider = 'Facebook';
+                // console.log("===================");
+                // console.log("ITEM:");
+                // console.log(item);
+                // console.log("-------------------");
+                // console.log("CAPTION:");
+                // console.log(item.caption);
+                // console.log("===================");
+                if (item.name) {
+                  tempJSON.caption = item.name;
+                } else {
+                  tempJSON.caption = null;
+                }
+                if (item.from.id == user.id) {
+                  tempJSON.from = 'You';
+                } else {
+                  tempJSON.from = item.from.name;
+                }
+                // TODO: Get profile picture, probably through user id and graph api
+                // tempJSON.profile_picture = item.user.profile_picture;
+                var date = new Date(item.created_time);
+                // console.log(date.getDay() + "." + date.getMonth() + "." + date.getYear());
+                tempJSON.day = date.getDate();
+                tempJSON.month = date.getMonth() + 1;
+                tempJSON.year = date.getFullYear();
+                imageArr.push(tempJSON);
+              // }
+            }
+
           res.render('browse', {photos: imageArr});
         });
       } else {
-        res.send('Something went wrong. Could not recognize your user account');
+        res.send('Something went wrong. Could not recognize this user account');
       }
     }
   });
