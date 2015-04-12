@@ -4,9 +4,9 @@
       <div class="card">
         <div class="card-content">
           <span class="card-title black-text">Facebook</span>
-          {{#if facebook_user}}
-          <p>Name: {{facebook_user.displayName}}</p>
-          <p>ID: {{facebook_user.id}}</p>
+          {{#if facebook}}
+          <p>Name: {{facebook.name}}</p>
+          <p>ID: {{facebook.id}}</p>
           {{/if}}
           <!-- <div class="row">                
             <div class="col s11">
@@ -18,13 +18,11 @@
             </div>
           </div> -->
         </div>
-        <div class="card-action">
-        {{#if facebook_user}}
-          <a href="/logout" class="red-text">Disconnect</a>
-        {{else}}
-          <a href="/auth/facebook" class="light-green-text">Connect with Facebook</a>
-        {{/if}}
+        {{#unless facebook}}
+        <div class="card-action">        
+          <a href="/auth/facebook" class="light-green-text">Connect to Facebook</a>        
         </div>
+        {{/unless}}
       </div>
       
     </div>
@@ -36,22 +34,30 @@
       <div class="card">
         <div class="card-content">
           <span class="card-title black-text">Instagram</span>
-          {{#if instagram_user}}
-          <p>Username: {{instagram_user.username}}</p>
-          <p>Name: {{instagram_user.displayName}}</p>
-          <p>ID: {{instagram_user.id}}</p>
+          {{#if instagram}}
+          <p>Username: {{instagram.name}}</p>
+          <!-- <p>Name: {{instagram.displayName}}</p> -->
+          <p>ID: {{instagram.id}}</p>
           {{/if}}
         </div>
+        {{#unless instagram}}
         <div class="card-action">
-        {{#if instagram_user}}
-          <a href="/logout" class="red-text">Disconnect</a>
-        {{else}}
-          <a href="/auth/instagram" class="light-green-text">Connect with Instagram</a>
-        {{/if}}
+          <a href="/auth/instagram" class="light-green-text">Connect to Instagram</a>        
         </div>
+        {{/unless}}
       </div>
       
     </div>
   </div>
+
+  {{#if facebook}}
+  <a href="/logout" class="btn waves-effect red white-text right right">Disconnect All</a>
+  {{else}}
+    {{#if instagram}}
+    <a href="/logout" class="btn waves-effect red white-text right right">Disconnect All</a>
+    {{else}}
+    <a href="/logout" class="btn disabled right">Disconnect All</a>
+    {{/if}}
+  {{/if}}
 
 </div>  
