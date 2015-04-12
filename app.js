@@ -220,7 +220,7 @@ app.get('/', ensureAuthenticated, function(req, res) {
                 } else {
                   tempJSON.from = item.user.username;
                 }
-                tempJSON.profile_picture = item.user.profile_picture;
+                // tempJSON.profile_picture = item.user.profile_picture;
                 var date = new Date(parseInt(item.created_time) * 1000);
                 tempJSON.day = date.getDate();
                 tempJSON.month = date.getMonth() + 1;

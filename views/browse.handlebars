@@ -1,18 +1,17 @@
-<div style="padding: 7px">
-  <!-- grid of responsive square images, adapted from http://stackoverflow.com/questions/20456694/grid-of-responsive-squares -->
+<!-- TODO: Maybe use px values for margin and padding -->
+<div style="padding: 0.5%; padding-top: 0.7%">
+  <!-- grid of responsive square images with centered text, adapted from http://stackoverflow.com/questions/20456694/grid-of-responsive-squares -->
   {{#each photos}}
     <div class="square" style="background-image: url('{{image_url}}')">
       <div class="overlay"></div>
       <!-- TODO: Add content here and see which classes can be removed from grid.css -->
         <div class="content">
           <div class="table">
-            <div class="table-cell">
-            {{#if caption}}
-              <p>{{from}} on {{month}}/{{day}}/{{year}}:</p>
+            <div class="table-cell">            
+              <p>{{from}} on {{month}}/{{day}}/{{year}}</p>
+              {{#if caption}}
               <h5>{{caption}}</h5>
-            {{else}}
-              <h5>{{from}} on {{month}}/{{day}}/{{year}}</h5>
-            {{/if}}
+              {{/if}}
               <p><a href="{{link}}">Watch on {{provider}}</a></p>
             </div>
           </div>
