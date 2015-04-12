@@ -1,8 +1,19 @@
-<div class="row" style="margin-top: 3px">
-{{#each photos}}
-  {{#if url}}
-  <div class="col s3" style="padding: 5px"><div class="image"><img src="{{url}}" alt="" class="img responsive-img"></div></div>
-  {{/if}}
-{{/each}}
-  
+<div style="padding: 7px">
+  <!-- grid of responsive square images, adapted from http://stackoverflow.com/questions/20456694/grid-of-responsive-squares -->
+  {{#each photos}}
+    {{#if url}}
+    <div class="square" style="background-image: url('{{url}}')">
+      <div class="overlay"></div>
+      <!-- TODO: Add content here and see which classes can be removed from grid.css -->
+      <!-- <div class="content">
+        <div class="table">
+          <div class="table-cell">
+            centered content
+          </div>
+        </div>
+      </div> -->
+    </div>
+    {{/if}}
+  {{/each}}
 </div>
+  
