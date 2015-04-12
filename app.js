@@ -2,6 +2,7 @@
 var express = require('express');
 var passport = require('passport');
 var InstagramStrategy = require('passport-instagram').Strategy;
+var FacebookStrategy = require('passport-facebook').Strategy;
 var http = require('http');
 var path = require('path');
 var handlebars = require('express-handlebars');
@@ -10,6 +11,7 @@ var session = require('express-session');
 var cookieParser = require('cookie-parser');
 var dotenv = require('dotenv');
 var Instagram = require('instagram-node-lib');
+var Facebook = require('fbgraph');
 var mongoose = require('mongoose');
 var app = express();
 
@@ -25,6 +27,12 @@ var INSTAGRAM_ACCESS_TOKEN = "";
 Instagram.set('client_id', INSTAGRAM_CLIENT_ID);
 Instagram.set('client_secret', INSTAGRAM_CLIENT_SECRET);
 
+var FACEBOOK_APP_ID = process.env.facebook_app_id;
+var FACEBOOK_APP_SECRET = process.env.facebook_app_secret;
+var FACEBOOK_CALLBACK_URL = process.env.facebook_callback_url;
+// Facebook.setAppId(FACEBOOK_APP_ID);
+// Facebook.setAppSecret(FACEBOOK_APP_SECRET);
+// TODO: set config parameters for FB API
 
 //connect to database
 mongoose.connect(process.env.mongodb_connection_url);
@@ -65,7 +73,8 @@ passport.use(new InstagramStrategy({
     models.User.findOrCreate({
       "name": profile.username,
       "id": profile.id,
-      "access_token": accessToken 
+      "access_token": accessToken,
+      "provider": "instagram"
     }, function(err, user, created) {
       
       // created will be true here
@@ -82,6 +91,38 @@ passport.use(new InstagramStrategy({
     });
   }
 ));
+
+passport.use(new FacebookStrategy({
+    clientID: FACEBOOK_APP_ID,
+    clientSecret: FACEBOOK_APP_SECRET,
+    callbackURL: FACEBOOK_CALLBACK_URL,
+    enableProof: false
+  },
+  function(accessToken, refreshToken, profile, done) {
+    // console.log(profile);
+    models.User.findOrCreate({
+      "name": profile.username,
+      "id": profile.id,
+      "access_token": accessToken,
+      "provider": 'facebook'
+    }, function(err, user, created) {
+      // TODO: Copied from instagram; does this work for FB?
+
+      // created will be true here
+      models.User.findOrCreate({}, function(err, user, created) {
+        // created will be false here
+        process.nextTick(function () {
+          // To keep the example simple, the user's Instagram profile is returned to
+          // represent the logged-in user.  In a typical application, you would want
+          // to associate the Instagram account with a user record in your database,
+          // and return that user instead.
+          return done(null, profile);
+        });
+      });
+    });
+  }
+));
+
 
 //Configures the Template engine
 app.engine('handlebars', handlebars({defaultLayout: 'layout'}));
@@ -113,51 +154,94 @@ function ensureAuthenticated(req, res, next) {
   res.render('no_content');
 }
 
-//routes
-// TODO: Should the site always redirect to /browse or shoul the "Browse all" view be the top level view
-app.get('/', function(req, res){
-  res.redirect('/browse');
-});
-
-
 app.get('/accounts', function(req, res) {
-  res.render('accounts', {instagram_user: req.user});
+  // console.log(req.account);
+  // console.log("");
+  // console.log("========================");
+  // console.log("");
+  var facebook_user = null;
+  var instagram_user = null;
+  if (req.user) {
+    if (req.user.provider == 'facebook') {
+      facebook_user = req.user;
+    }
+    else if (req.user.provider == 'instagram') {
+      instagram_user = req.user;
+    }
+  }
+  // console.log(facebook_user);
+  // console.log(instagram_user);
+  res.render('accounts', {facebook_user: facebook_user, instagram_user: instagram_user});
 });
 
 
-app.get('/browse', ensureAuthenticated, function(req, res) {
-  var query = models.User.where({name: req.user.username});
+app.get('/', ensureAuthenticated, function(req, res) {
+  // User is logged in _either_ via FB or Instagram
+
+  var query = models.User.where({provider: req.user.provider, id: req.user.id});
   query.findOne(function(err, user) {
     if (err) return handleError(err);
     if (user) {
-      Instagram.users.self({
-        access_token: user.access_token,
-        complete: function(data) {
-          //Map will iterate through the returned data obj
-          var imageArr = data.map(function(item) {
-            // TODO: Maybe use positon of tag and show an overlay on the photo
-            var user_names = item.users_in_photo.map(function(user_item) {
-              return user_item.user.username;
+      if (user.provider == 'instagram') {
+        Instagram.users.self({
+          access_token: user.access_token,
+          complete: function(data) {
+            //Map will iterate through the returned data obj
+            var imageArr = data.map(function(item) {
+              // TODO: Maybe use positon of tag and show an overlay on the photo
+              var user_names = item.users_in_photo.map(function(user_item) {
+                return user_item.user.username;
+              });
+              // console.log(user_names);
+
+              if (user_names.indexOf(user.name) != -1) {
+                // current user is tagged in the photo
+                // console.log("gotcha");
+                //create temporary json object
+                tempJSON = {};
+                tempJSON.url = item.images.low_resolution.url;
+                //insert json object into image array
+                return tempJSON;
+              } else {
+                // TODO: Probably better to not put null items in array. Then also remove handling of null items in browse.handlebars
+                return null;
+              }
+              
             });
+            res.render('browse', {photos: imageArr});
+          }
+        });
+      } else if (user.provider == 'facebook') {
+        // console.log(Facebook.getAccessToken());
+        Facebook.setAccessToken(user.access_token);
+
+        Facebook.get('/' + user.id + '/photos', function(err, response) {
+          var imageArr = response.data.map(function(item) {
+            // TODO: Maybe use positon of tag and show an overlay on the photo
+            // var user_names = item.users_in_photo.map(function(user_item) {
+            //   return user_item.user.username;
+            // });
             // console.log(user_names);
 
-            if (user_names.indexOf(user.name) != -1) {
+            // if (user_names.indexOf(user.name) != -1) {
               // current user is tagged in the photo
               // console.log("gotcha");
               //create temporary json object
+
               tempJSON = {};
-              tempJSON.url = item.images.low_resolution.url;
+              tempJSON.url = item.source;
               //insert json object into image array
               return tempJSON;
-            } else {
-              // TODO: Probably better to not put null items in array. Then also remove handling of null items in browse.handlebars
-              return null;
-            }
-            
+            // } else {
+            //   // TODO: Probably better to not put null items in array. Then also remove handling of null items in browse.handlebars
+            //   return null;
+            // }
           });
           res.render('browse', {photos: imageArr});
-        }
-      });
+        });
+      } else {
+        res.send('Something went wrong. Could not recognize your user account');
+      }
     }
   });
 });
@@ -169,36 +253,36 @@ app.get('/favorites', function(req, res) {
 
 
 
+// TODO - high priority: Allow multiple accounts at the same time by including authorize (vs authenticate), see here: http://passportjs.org/guide/authorize/
 
-// GET /auth/instagram
-//   Use passport.authenticate() as route middleware to authenticate the
-//   request.  The first step in Instagram authentication will involve
-//   redirecting the user to instagram.com.  After authorization, Instagram
-//   will redirect the user back to this application at /auth/instagram/callback
+
 app.get('/auth/instagram',
-  passport.authenticate('instagram'),
-  function(req, res){
-    // The request will be redirected to Instagram for authentication, so this
-    // function will not be called.
-  });
+  passport.authenticate('instagram'));
 
-// GET /auth/instagram/callback
-//   Use passport.authenticate() as route middleware to authenticate the
-//   request.  If authentication fails, the user will be redirected back to the
-//   login page.  Otherwise, the primary route function function will be called,
-//   which, in this example, will redirect the user to the home page.
 app.get('/auth/instagram/callback', 
-  passport.authenticate('instagram', { failureRedirect: '/login'}),
+  passport.authenticate('instagram', {failureRedirect: '/accounts'}),
   function(req, res) {
     // TODO: Redirect to previous page
     res.redirect('/accounts');
   });
 
-// TODO - low prio: Maybe handle directly after button call, without redirecting
-app.get('/logout', function(req, res){
+
+app.get('/auth/facebook',
+  passport.authenticate('facebook', { scope: ['user_photos'] }));
+
+// TODO: Handle failureRedirect
+app.get('/auth/facebook/callback',
+  passport.authenticate('facebook', {failureRedirect: '/accounts'}),
+  function(req, res) {
+    res.redirect('/accounts');
+  });
+
+
+app.get('/logout', function(req, res) {
   req.logout();
   res.redirect('/accounts');
 });
+
 
 http.createServer(app).listen(app.get('port'), function() {
     console.log('Express server listening on port ' + app.get('port'));
