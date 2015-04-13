@@ -1,39 +1,20 @@
 //dependencies for each module used
 var express = require('express');
-var passport = require('passport');
-var InstagramStrategy = require('passport-instagram').Strategy;
-var FacebookStrategy = require('passport-facebook').Strategy;
 var http = require('http');
 var path = require('path');
 var handlebars = require('express-handlebars');
 var bodyParser = require('body-parser');
 var session = require('express-session');
 var cookieParser = require('cookie-parser');
-var dotenv = require('dotenv');
 var Instagram = require('instagram-node-lib');
 var Facebook = require('fbgraph');
 var mongoose = require('mongoose');
+var _ = require('lodash');
 var app = express();
-
 
 //local dependencies
 var models = require('./models');
-
-//client id and client secret here, taken from .env
-dotenv.load();
-var INSTAGRAM_CLIENT_ID = process.env.instagram_client_id;
-var INSTAGRAM_CLIENT_SECRET = process.env.instagram_client_secret;
-var INSTAGRAM_CALLBACK_URL = process.env.instagram_callback_url;
-var INSTAGRAM_ACCESS_TOKEN = "";
-Instagram.set('client_id', INSTAGRAM_CLIENT_ID);
-Instagram.set('client_secret', INSTAGRAM_CLIENT_SECRET);
-
-var FACEBOOK_APP_ID = process.env.facebook_app_id;
-var FACEBOOK_APP_SECRET = process.env.facebook_app_secret;
-var FACEBOOK_CALLBACK_URL = process.env.facebook_callback_url;
-// Facebook.setAppId(FACEBOOK_APP_ID);
-// Facebook.setAppSecret(FACEBOOK_APP_SECRET);
-// TODO: set config parameters for FB API
+var auth = require('./auth');
 
 //connect to database
 mongoose.connect(process.env.mongodb_connection_url);
@@ -43,232 +24,9 @@ db.once('open', function (callback) {
   console.log("Database connected succesfully.");
 });
 
-// Passport session setup.
-//   To support persistent login sessions, Passport needs to be able to
-//   serialize users into and deserialize users out of the session.  Typically,
-//   this will be as simple as storing the user ID when serializing, and finding
-//   the user by ID when deserializing.  However, since this example does not
-//   have a database of user records, the complete Instagram profile is
-//   serialized and deserialized.
-passport.serializeUser(function(user, done) {
-  done(null, user);
-});
-
-passport.deserializeUser(function(obj, done) {
-  done(null, obj);
-});
-
-
-// Use the InstagramStrategy within Passport.
-//   Strategies in Passport require a `verify` function, which accept
-//   credentials (in this case, an accessToken, refreshToken, and Instagram
-//   profile), and invoke a callback with a user object.
-passport.use(new InstagramStrategy({
-    clientID: INSTAGRAM_CLIENT_ID,
-    clientSecret: INSTAGRAM_CLIENT_SECRET,
-    callbackURL: INSTAGRAM_CALLBACK_URL,
-    passReqToCallback: true
-  },
-  function(req, accessToken, refreshToken, profile, done) {
-
-    // asynchronous
-    process.nextTick(function() {
-
-      if (!req.user) {
-        console.log("signing up with Instagram");
-
-        models.User.findOne({'instagram.id': profile.id}, function(err, user) {
-
-          // if there is an error, stop everything and return that
-          // ie an error connecting to the database
-          if (err)
-            return done(err);
-
-          // if the user is found, then log them in
-          if (user) {
-            return done(null, user); // user found, return that user
-          } else {
-            // if there is no user found with that facebook id, create them
-            console.log("Creating new user for Instagram profile:");
-            console.log(profile);
-            var newUser = new models.User();
-
-            // set all of the facebook information in our user model
-            newUser.instagram.id = profile.id; // set the users facebook id                   
-            newUser.instagram.name = profile.username;
-            newUser.instagram.access_token = accessToken; // we will save the token that facebook provides to the user                    
-            
-            console.log("New user:");
-            console.log(newUser);
-
-            // save our user to the database
-            newUser.save(function(err) {
-              if (err)
-                return handleError(err);
-
-              // if successful, return the new user
-              return done(null, newUser);
-            });
-          }
-        });
-
-
-      
-        // models.User.findOrCreate({
-        //   'instagram.id': profile.id,
-        //   'instagram.name': profile.username,
-        //   'instagram.access_token': accessToken
-        // }, function(err, user, created) {
-
-        
-        // // user is not logged in yet
-        
-        //   // created will be true here
-        //   models.User.findOrCreate({}, function(err, user, created) {
-        //     // created will be false here
-        //     process.nextTick(function () {
-        //       // To keep the example simple, the user's Instagram profile is returned to
-        //       // represent the logged-in user.  In a typical application, you would want
-        //       // to associate the Instagram account with a user record in your database,
-        //       // and return that user instead.
-        //       return done(null, profile);
-        //     });
-        //   });      
-        // });
-
-      } else {
-        console.log("connecting Instagram");
-        console.log("User in session:");
-        console.log(req.user);
-        console.log("User's _id:");
-        console.log(req.user._id);
-
-        // user is already logged in with another account; just link this one
-        models.User.findOne({'_id': req.user._id}, function(err, user) {
-          if (err)
-            return done(err);
-
-          // TODO: Maybe add check if user was found, but actually not needed as the user is searched by its DB id
-          user.instagram.id = profile.id;
-          user.instagram.name = profile.username;
-          user.instagram.access_token = accessToken;
-          user.save(function(err) {
-            if (err)
-              return handleError(err);
-          });
-
-          console.log("updated user");
-          console.log(user);     
-        });
-
-        return done(null, req.user);       
-   
-      }
-    });
-  }
-));
-
-// TODO: Refactor this stuff to auth.js
-passport.use(new FacebookStrategy({
-    clientID: FACEBOOK_APP_ID,
-    clientSecret: FACEBOOK_APP_SECRET,
-    callbackURL: FACEBOOK_CALLBACK_URL,
-    // TODO: Needed?
-    // enableProof: false,
-    passReqToCallback: true
-  },
-  function(req, accessToken, refreshToken, profile, done) {
-    // console.log(profile);
-
-    // asynchronous
-    process.nextTick(function() {
-
-      if (!req.user) {
-        console.log("Signing up with FB");
-        // user is not logged in yet
-
-        models.User.findOne({'facebook.id': profile.id}, function(err, user) {
-
-          // if there is an error, stop everything and return that
-          // ie an error connecting to the database
-          if (err)
-            return done(err);
-
-          // if the user is found, then log them in
-          if (user) {
-            return done(null, user); // user found, return that user
-          } else {
-            // if there is no user found with that facebook id, create them
-            var newUser = new models.User();
-
-            console.log("Creating new user for FB profile:");
-            console.log(profile);
-
-            // set all of the facebook information in our user model
-            newUser.facebook.id = profile.id; // set the users facebook id                   
-            newUser.facebook.name = profile.displayName;
-            newUser.facebook.access_token = accessToken; // we will save the token that facebook provides to the user                    
-            
-            console.log("New user:");
-            console.log(newUser);
-
-            // save our user to the database
-            newUser.save(function(err) {
-              if (err)
-                throw err;
-
-              // if successful, return the new user
-              return done(null, newUser);
-            });
-            return done(null, newUser);
-          }
-
-        });
-        // models.User.findOrCreate({
-        //   'facebook.id': profile.id,
-        //   'facebook.name': profile.username,
-        //   'facebook.access_token': accessToken
-        // }, function(err, user, created) {
-        //   // TODO: Is the second findOrCreate needed?
-
-        //   // created will be true here
-        //   models.User.findOrCreate({}, function(err, user, created) {
-        //     // created will be false here
-        //     process.nextTick(function () {
-        //       // To keep the example simple, the user's Instagram profile is returned to
-        //       // represent the logged-in user.  In a typical application, you would want
-        //       // to associate the Instagram account with a user record in your database,
-        //       // and return that user instead.
-        //       return done(null, profile);
-        //     });
-        //   });
-        // });
-
-      } else {
-        console.log("Connecting FB");
-        console.log("User in session:");
-        console.log(req.user);
-        // user is already logged in with another account; just link this one
-        
-        models.User.findOne({'_id': req.user._id}, function(err, user) {
-          if (err)
-            return done(err);
-
-          user.facebook.id = profile.id;
-          user.facebook.name = profile.displayName;
-          user.facebook.access_token = accessToken;
-
-          user.save(function(err) {
-            if (err)
-              handleError(err);
-          });
-        });
-        return done(null, req.user);
-      }
-    });
-  }
-));
-
+// Setup instagram API
+Instagram.set('client_id', auth.INSTAGRAM_CLIENT_ID);
+Instagram.set('client_secret', auth.INSTAGRAM_CLIENT_SECRET);
 
 //Configures the Template engine
 app.engine('handlebars', handlebars({defaultLayout: 'layout'}));
@@ -281,8 +39,8 @@ app.use(cookieParser());
 app.use(session({ secret: 'keyboard cat',
                   saveUninitialized: true,
                   resave: true}));
-app.use(passport.initialize());
-app.use(passport.session());
+app.use(auth.passport.initialize());
+app.use(auth.passport.session());
 
 //set environment ports and start application
 app.set('port', process.env.PORT || 3000);
@@ -297,219 +55,237 @@ function ensureAuthenticated(req, res, next) {
     return next(); 
   }
   // TODO: Handle situation if no account is connected
-  res.render('no_content');
+  res.render('not_logged_in');
 }
 
 app.get('/accounts', function(req, res) {
-  // console.log(req.account);
-  // console.log("");
-  // console.log("========================");
-  // console.log("");
-  // var facebook_user = null;
-  // var instagram_user = null;
-  // if (req.user) {
-  //   if (req.user.provider == 'facebook') {
-  //     facebook_user = req.user;
-  //   }
-  //   else if (req.user.provider == 'instagram') {
-  //     instagram_user = req.user;
-  //   }
-  // }
-  // console.log(facebook_user);
-  // console.log(instagram_user);
   var params = {};
   if (req.user) {
     params = {facebook: req.user.facebook, instagram: req.user.instagram};
   }
-  res.render('accounts', params);//, {facebook: req.user.facebook, instagram: req.user.instagram});
+  res.render('accounts', params);
 });
 
 
 app.get('/', ensureAuthenticated, function(req, res) {
-  // User is logged in _either_ via FB or Instagram
+  var user = req.user;
+  var imageArr = [];
 
+  var async_finished = _.after(2, function() {
+      if (imageArr.length === 0) {
+        res.render('no_photos');
+      } else {
+        imageArr.sort(function(a, b) {
+          return b.timestamp - a.timestamp;
+        });
+        res.render('browse', {photos: imageArr});            
+      }
+    });
 
-  models.User.findOne({'_id': req.user._id}, function(err, user) {
-    if (err) return handleError(err);
-    if (user) {
-      console.log("getting photos for user:");
-      console.log(user);
+  if (user.instagram) {
+    // console.log("getting instagram");
+    Instagram.users.self({
+      access_token: user.instagram.access_token,
+      complete: function(data) {
+        // console.log("got data from instagram:");
+        // console.log(data);
+        for (var i = 0; i < data.length; i++) {
+          var item = data[i];
 
-      var imageArr = [];
-
-      var facebook_finished = false;
-      var instagram_finished = false;
-      var renderIfFinished = function() {
-        if (facebook_finished && instagram_finished) {
-          imageArr.sort(function(a, b) {
-            return b.timestamp - a.timestamp;
+          // TODO: Maybe use positon of tag and show an overlay on the photo
+          var user_names = item.users_in_photo.map(function(user_item) {
+            return user_item.user.username;
           });
-          // TODO: Handle case if imageArr is empty
-          res.render('browse', {photos: imageArr});
-        }
-      };
+          // console.log(user_names);
 
-      if (user.instagram) {
-        console.log("getting instagram");
-        Instagram.users.self({
-          access_token: user.instagram.access_token,
-          complete: function(data) {
-            // console.log("got data from instagram:");
-            // console.log(data);
-            for (var i = 0; i < data.length; i++) {
-              var item = data[i];
-
-              // TODO: Maybe use positon of tag and show an overlay on the photo
-              var user_names = item.users_in_photo.map(function(user_item) {
-                return user_item.user.username;
-              });
-              // console.log(user_names);
-
-              // TODO: Use user id instead
-              if (user_names.indexOf(user.instagram.name) != -1) {
-                // current user is tagged in the photo
-                // console.log("gotcha");
-                var tempJSON = {};
-                tempJSON.image_url = item.images.low_resolution.url;
-                tempJSON.link = item.link;
-                tempJSON.provider = 'Instagram';
-                // console.log("===================");
-                // console.log("ITEM:");
-                // console.log(item);
-                // console.log("-------------------");
-                // console.log("CAPTION:");
-                // console.log(item.caption);
-                // console.log("===================");
-                if (item.caption) {
-                  tempJSON.caption = item.caption.text;
-                } else {
-                  tempJSON.caption = null;
-                }
-                if (item.user.id == user.instagram.id) {
-                  tempJSON.from = 'You';
-                } else {
-                  tempJSON.from = item.user.username;
-                }
-                // tempJSON.profile_picture = item.user.profile_picture;
-                var date = new Date(parseInt(item.created_time) * 1000);
-                console.log(date.toLocaleDateString());
-                tempJSON.timestamp = date.getTime();
-                tempJSON.day = date.getDate();
-                tempJSON.month = date.getMonth() + 1;
-                tempJSON.year = date.getFullYear();
-                imageArr.push(tempJSON);
-
-              }
+          // TODO: Use user id instead
+          if (user_names.indexOf(user.instagram.name) != -1) {
+            // current user is tagged in the photo
+            // console.log("gotcha");
+            var tempJSON = {};
+            tempJSON.image_url = item.images.low_resolution.url;
+            tempJSON.link = item.link;
+            tempJSON.provider = 'Instagram';
+            // console.log("===================");
+            // console.log("ITEM:");
+            // console.log(item);
+            // console.log("-------------------");
+            // console.log("CAPTION:");
+            // console.log(item.caption);
+            // console.log("===================");
+            if (item.caption) {
+              tempJSON.caption = item.caption.text;
+            } else {
+              tempJSON.caption = null;
             }
+            if (item.user.id == user.instagram.id) {
+              tempJSON.from = 'You';
+            } else {
+              tempJSON.from = item.user.username;
+            }
+            // tempJSON.profile_picture = item.user.profile_picture;
+            var date = new Date(parseInt(item.created_time) * 1000);
+            tempJSON.timestamp = date.getTime();
+            tempJSON.day = date.getDate();
+            tempJSON.month = date.getMonth() + 1;
+            tempJSON.year = date.getFullYear();
+            imageArr.push(tempJSON);
 
-            instagram_finished = true;
-            renderIfFinished();
           }
-        });
-      } else {
-        instagram_finished = true;
+        }
+
+        async_finished();
       }
-          
+    });
+  } else {
+    async_finished();
+  }
       
+  
 
-      if (user.facebook) {
+  if (user.facebook) {
+    Facebook.get('/me/photos?access_token=' + user.facebook.access_token, 
+      function(err, response) {
+        //TODO: Handle error
+        for (var i = 0; i < response.data.length; i++) {
+          var item = response.data[i];
 
-        // TODO: Do not set this at every call
-        Facebook.setAccessToken(user.facebook.access_token);
+          // // TODO: Maybe use positon of tag and show an overlay on the photo
+          // var user_names = item.users_in_photo.map(function(user_item) {
+          //   return user_item.user.username;
+          // });
+          // // console.log(user_names);
 
-        Facebook.get('/' + user.facebook.id + '/photos', function(err, response) {
-            for (var i = 0; i < response.data.length; i++) {
-              var item = response.data[i];
-
-              // // TODO: Maybe use positon of tag and show an overlay on the photo
-              // var user_names = item.users_in_photo.map(function(user_item) {
-              //   return user_item.user.username;
-              // });
-              // // console.log(user_names);
-
-              // if (user_names.indexOf(user.name) != -1) {
-                // current user is tagged in the photo
-                // console.log("gotcha");
-                var tempJSON = {};
-                tempJSON.image_url = item.source;
-                tempJSON.link = item.link;
-                tempJSON.provider = 'Facebook';
-                // console.log("===================");
-                // console.log("ITEM:");
-                // console.log(item);
-                // console.log("-------------------");
-                // console.log("CAPTION:");
-                // console.log(item.caption);
-                // console.log("===================");
-                if (item.name) {
-                  tempJSON.caption = item.name;
-                } else {
-                  tempJSON.caption = null;
-                }
-                if (item.from.id == user.facebook.id) {
-                  tempJSON.from = 'You';
-                } else {
-                  tempJSON.from = item.from.name;
-                }
-                // TODO: Get profile picture, probably through user id and graph api
-                // tempJSON.profile_picture = item.user.profile_picture;
-                var date = new Date(item.created_time);
-                tempJSON.timestamp = date.getTime();
-                // console.log(date.getDay() + "." + date.getMonth() + "." + date.getYear());
-                tempJSON.day = date.getDate();
-                tempJSON.month = date.getMonth() + 1;
-                tempJSON.year = date.getFullYear();
-                imageArr.push(tempJSON);
-
-              // }
+          // if (user_names.indexOf(user.name) != -1) {
+            // current user is tagged in the photo
+            // console.log("gotcha");
+            var tempJSON = {};
+            tempJSON.image_url = item.source;
+            tempJSON.link = item.link;
+            tempJSON.provider = 'Facebook';
+            // console.log("===================");
+            // console.log("ITEM:");
+            // console.log(item);
+            // console.log("-------------------");
+            // console.log("CAPTION:");
+            // console.log(item.caption);
+            // console.log("===================");
+            if (item.name) {
+              tempJSON.caption = item.name;
+            } else {
+              tempJSON.caption = null;
             }
+            if (item.from.id == user.facebook.id) {
+              tempJSON.from = 'You';
+            } else {
+              tempJSON.from = item.from.name;
+            }
+            // TODO: Get profile picture, probably through user id and graph api
+            // tempJSON.profile_picture = item.user.profile_picture;
+            var date = new Date(item.created_time);
+            tempJSON.timestamp = date.getTime();
+            // console.log(date.getDay() + "." + date.getMonth() + "." + date.getYear());
+            tempJSON.day = date.getDate();
+            tempJSON.month = date.getMonth() + 1;
+            tempJSON.year = date.getFullYear();
+            imageArr.push(tempJSON);
 
-            facebook_finished = true;
-            renderIfFinished();
-        });
-      } else {
-        facebook_finished = true;
-      }
+          // }
+        }
 
-    }
-  });
+        async_finished();
+    });
+  } else {
+    async_finished();
+  }
+
 });
 
 
-// app.get('/favorites', function(req, res) {
-//   res.render('favorites');
-// });
+app.get('/connect', ensureAuthenticated, function(req, res) {
+  console.log("Got call to connect");
+
+  var facebook, instagram;
+
+  var async_finished = _.after(2, function() {
+    console.log("Rendering, this is the user:");
+    console.log(req.user);
+    if (facebook && instagram)
+      res.render('all_connected', {facebook: facebook, instagram: instagram});
+    else if (facebook)
+      res.render('facebook_connected', {facebook: facebook});
+    else if (instagram)
+      res.render('instagram_connected', {instagram: instagram});
+    });
+
+  if (req.user.facebook) {
+    facebook = {
+      name: req.user.facebook.name
+    };    
+
+    Facebook.get('/me?fields=age_range,gender&access_token=' + req.user.facebook.access_token,
+      function(err, response) {
+        // console.log("got user data from FB:");
+        // console.log(response);
+        var description = '';
+        if (response.gender)
+          description += capitalizeFirstLetter(response.gender) + ', ';
+        if (response.age_range) 
+          description += response.age_range.min + '+ years old';
+        facebook.description = description;
+        async_finished();
+      });
+  } else {
+    async_finished();
+  }
+
+  if (req.user.instagram) {
+    instagram = {
+      name: req.user.instagram.name
+    };
+
+    Instagram.users.info({
+      user_id: req.user.instagram.id,
+      complete: function(data) {
+          // console.log("got user data from Instagram:");
+          // console.log(data);
+          instagram.description = data.bio;
+          async_finished();
+        }
+      });
+  } else {
+    async_finished();
+  }
+  
+});
+
 
 
 app.get('/auth/instagram',
-  passport.authenticate('instagram'));
+  auth.passport.authenticate('instagram'));
 
 app.get('/auth/instagram/callback', 
-  passport.authenticate('instagram', {failureRedirect: '/accounts'}),
-  function(req, res) {
-    // TODO: Redirect to previous page
-    res.redirect('/accounts');
-  });
-
+  auth.passport.authenticate('instagram', {successRedirect: '/connect', failureRedirect: '/accounts'}));
 
 app.get('/auth/facebook',
-  passport.authenticate('facebook', {scope: ['user_photos'] }));
+  auth.passport.authenticate('facebook', {scope: ['user_photos'] }));
 
-// TODO: Handle failureRedirect
-// TODO: Handle via successRedirect or show toast etc
+// TODO: Maybe show toast on successfull login
 app.get('/auth/facebook/callback',
-  passport.authenticate('facebook', {failureRedirect: '/accounts'}),
-  function(req, res) {
-    res.redirect('/accounts');
-  });
+  auth.passport.authenticate('facebook', {successRedirect: '/connect', failureRedirect: '/accounts'}));
 
 
-app.get('/logout', function(req, res) {
+app.get('/disconnect', function(req, res) {
   req.logout();
-  res.redirect('/accounts');
+  res.redirect('/');
 });
 
 
 http.createServer(app).listen(app.get('port'), function() {
     console.log('Express server listening on port ' + app.get('port'));
 });
+
+// Helper functions
+function capitalizeFirstLetter(string) {
+  return string.charAt(0).toUpperCase() + string.slice(1);
+}

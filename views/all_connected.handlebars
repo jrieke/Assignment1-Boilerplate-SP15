@@ -1,10 +1,10 @@
 <div class="container section">
 
   <div class="row center-align">
-    <h3>Your accounts</h3>
+    <h3>Welcome back!</h3>
+    <p>I restored your account information:</p>
   </div>
 
-  {{#if facebook}}
   <!-- TODO: Maybe do margin-bottom: 0 px on these rows -->
   <div class="row">
     <div class="col s12 m10 offset-m1 l6 offset-l3">
@@ -25,9 +25,7 @@
 
     </div>
   </div>
-  {{/if}}
 
-  {{#if instagram}}
   <div class="row">
     <div class="col s12 m10 offset-m1 l6 offset-l3">
 
@@ -47,17 +45,10 @@
 
     </div>
   </div>
-  {{/if}}
 
   <div class="row">
     <div class="col s6 offset-s3 right-align">
-      {{#unless facebook}}
-      <a href="/auth/facebook" class="btn waves-effect blue">Connect Facebook</a>&nbsp;
-      {{/unless}}
-      {{#unless instagram}}
-      <a href="/auth/instagram" class="btn waves-effect brown">Connect Instagram</a>&nbsp;
-      {{/unless}}
-      <a href="/disconnect" class="btn waves-effect red">Disconnect</a>
+      <a href="/" class="btn waves-effect light-green">Browse pictures</a>      
     </div>      
   </div>
   
