@@ -174,7 +174,7 @@ passport.use(new FacebookStrategy({
     clientSecret: FACEBOOK_APP_SECRET,
     callbackURL: FACEBOOK_CALLBACK_URL,
     // TODO: Needed?
-    enableProof: false,
+    // enableProof: false,
     passReqToCallback: true
   },
   function(req, accessToken, refreshToken, profile, done) {
@@ -337,6 +337,18 @@ app.get('/', ensureAuthenticated, function(req, res) {
 
       var imageArr = [];
 
+      var facebook_finished = false;
+      var instagram_finished = false;
+      var renderIfFinished = function() {
+        if (facebook_finished && instagram_finished) {
+          imageArr.sort(function(a, b) {
+            return b.timestamp - a.timestamp;
+          });
+          // TODO: Handle case if imageArr is empty
+          res.render('browse', {photos: imageArr});
+        }
+      };
+
       if (user.instagram) {
         console.log("getting instagram");
         Instagram.users.self({
@@ -380,23 +392,28 @@ app.get('/', ensureAuthenticated, function(req, res) {
                 }
                 // tempJSON.profile_picture = item.user.profile_picture;
                 var date = new Date(parseInt(item.created_time) * 1000);
+                console.log(date.toLocaleDateString());
+                tempJSON.timestamp = date.getTime();
                 tempJSON.day = date.getDate();
                 tempJSON.month = date.getMonth() + 1;
                 tempJSON.year = date.getFullYear();
                 imageArr.push(tempJSON);
 
-      console.log("processed instagram, imageArr so far:");
-      console.log(imageArr);
-
               }
             }
-          
 
+            instagram_finished = true;
+            renderIfFinished();
+          }
+        });
+      } else {
+        instagram_finished = true;
+      }
+          
       
 
       if (user.facebook) {
-        console.log("getting facebook");
-        // console.log(Facebook.getAccessToken());
+
         // TODO: Do not set this at every call
         Facebook.setAccessToken(user.facebook.access_token);
 
@@ -437,6 +454,7 @@ app.get('/', ensureAuthenticated, function(req, res) {
                 // TODO: Get profile picture, probably through user id and graph api
                 // tempJSON.profile_picture = item.user.profile_picture;
                 var date = new Date(item.created_time);
+                tempJSON.timestamp = date.getTime();
                 // console.log(date.getDay() + "." + date.getMonth() + "." + date.getYear());
                 tempJSON.day = date.getDate();
                 tempJSON.month = date.getMonth() + 1;
@@ -446,20 +464,13 @@ app.get('/', ensureAuthenticated, function(req, res) {
               // }
             }
 
-          // TODO: The calls to instagram and fb are async; render this after they have completed separately
-
-          // TODO: Sort by time
-          // imageArr.sort(function(a, b) {
-          //   return a.
-          // });
-          res.render('browse', {photos: imageArr});
+            facebook_finished = true;
+            renderIfFinished();
         });
+      } else {
+        facebook_finished = true;
+      }
 
-      console.log(imageArr);
-      }
-      }
-        });
-    }
     }
   });
 });
@@ -468,10 +479,6 @@ app.get('/', ensureAuthenticated, function(req, res) {
 // app.get('/favorites', function(req, res) {
 //   res.render('favorites');
 // });
-
-
-
-// TODO - high priority: Allow multiple accounts at the same time by including authorize (vs authenticate), see here: http://passportjs.org/guide/authorize/
 
 
 app.get('/auth/instagram',
