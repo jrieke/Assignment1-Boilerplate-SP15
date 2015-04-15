@@ -6,15 +6,17 @@ var handlebars = require('express-handlebars');
 var bodyParser = require('body-parser');
 var session = require('express-session');
 var cookieParser = require('cookie-parser');
-var Instagram = require('instagram-node-lib');
-var Facebook = require('fbgraph');
 var mongoose = require('mongoose');
 var _ = require('lodash');
+var flash = require('connect-flash');
 var app = express();
 
 //local dependencies
 var models = require('./models');
 var auth = require('./auth');
+// TODO: Maybe rename these
+var Instagram = auth.Instagram;
+var Facebook = auth.Facebook;
 
 //connect to database
 mongoose.connect(process.env.mongodb_connection_url);
@@ -24,9 +26,6 @@ db.once('open', function (callback) {
   console.log("Database connected succesfully.");
 });
 
-// Setup instagram API
-Instagram.set('client_id', auth.INSTAGRAM_CLIENT_ID);
-Instagram.set('client_secret', auth.INSTAGRAM_CLIENT_SECRET);
 
 //Configures the Template engine
 app.engine('handlebars', handlebars({defaultLayout: 'layout'}));
@@ -39,6 +38,7 @@ app.use(cookieParser());
 app.use(session({ secret: 'keyboard cat',
                   saveUninitialized: true,
                   resave: true}));
+app.use(flash());
 app.use(auth.passport.initialize());
 app.use(auth.passport.session());
 
@@ -52,13 +52,28 @@ app.set('port', process.env.PORT || 3000);
 //   login page.
 function ensureAuthenticated(req, res, next) {
   if (req.isAuthenticated()) { 
+    // req.flash('connection_sequence_finished', true);
     return next(); 
+  } else {
+    // TODO: Handle situation if no account is connected
+    // req.flash('state_connection_sequence', 'started');
+    // res.render('not_logged_in');
+    res.redirect('/connect');
   }
-  // TODO: Handle situation if no account is connected
-  res.render('not_logged_in');
 }
 
-app.get('/accounts', function(req, res) {
+// app.get('/connect', ensureAuthenticated, function(req, res) {
+//   if (req.user.facebook && req.user.instagram) {
+//     // TODO: Get description
+//     res.render('all_connected', {facebook: req.user.facebook, instagram: req.user.instagram});
+//   } else if (req.user.facebook) {
+//     res.render('facebook_connected', {facebook: facebook});
+//   } else if (req.user.instagram) {
+//     res.render('instagram_connected', {instagram: instagram});
+//   }
+// });
+
+app.get('/accounts', ensureAuthenticated, function(req, res) {
   var params = {};
   if (req.user) {
     params = {facebook: req.user.facebook, instagram: req.user.instagram};
@@ -202,59 +217,63 @@ app.get('/', ensureAuthenticated, function(req, res) {
 });
 
 
-app.get('/connect', ensureAuthenticated, function(req, res) {
+app.get('/connect', function(req, res) {
   console.log("Got call to connect");
-
-  var facebook, instagram;
-
-  var async_finished = _.after(2, function() {
-    console.log("Rendering, this is the user:");
-    console.log(req.user);
-    if (facebook && instagram)
-      res.render('all_connected', {facebook: facebook, instagram: instagram});
-    else if (facebook)
-      res.render('facebook_connected', {facebook: facebook});
-    else if (instagram)
-      res.render('instagram_connected', {instagram: instagram});
-    });
-
-  if (req.user.facebook) {
-    facebook = {
-      name: req.user.facebook.name
-    };    
-
-    Facebook.get('/me?fields=age_range,gender&access_token=' + req.user.facebook.access_token,
-      function(err, response) {
-        // console.log("got user data from FB:");
-        // console.log(response);
-        var description = '';
-        if (response.gender)
-          description += capitalizeFirstLetter(response.gender) + ', ';
-        if (response.age_range) 
-          description += response.age_range.min + '+ years old';
-        facebook.description = description;
-        async_finished();
-      });
+  if (!req.isAuthenticated()) {
+    res.render('not_logged_in');
   } else {
-    async_finished();
-  }
 
-  if (req.user.instagram) {
-    instagram = {
-      name: req.user.instagram.name
-    };
+    var facebook, instagram;
 
-    Instagram.users.info({
-      user_id: req.user.instagram.id,
-      complete: function(data) {
-          // console.log("got user data from Instagram:");
-          // console.log(data);
-          instagram.description = data.bio;
+    var async_finished = _.after(2, function() {
+      console.log("Rendering, this is the user:");
+      console.log(req.user);
+      if (facebook && instagram)
+        res.render('all_connected', {facebook: facebook, instagram: instagram});
+      else if (facebook)
+        res.render('facebook_connected', {facebook: facebook});
+      else if (instagram)
+        res.render('instagram_connected', {instagram: instagram});
+      });
+
+    if (req.user.facebook) {
+      facebook = {
+        name: req.user.facebook.name
+      };    
+
+      Facebook.get('/me?fields=age_range,gender&access_token=' + req.user.facebook.access_token,
+        function(err, response) {
+          // console.log("got user data from FB:");
+          // console.log(response);
+          var description = '';
+          if (response.gender)
+            description += capitalizeFirstLetter(response.gender) + ', ';
+          if (response.age_range) 
+            description += response.age_range.min + '+ years old';
+          facebook.description = description;
           async_finished();
-        }
-      });
-  } else {
-    async_finished();
+        });
+    } else {
+      async_finished();
+    }
+
+    if (req.user.instagram) {
+      instagram = {
+        name: req.user.instagram.name
+      };
+
+      Instagram.users.info({
+        user_id: req.user.instagram.id,
+        complete: function(data) {
+            // console.log("got user data from Instagram:");
+            // console.log(data);
+            instagram.description = data.bio;
+            async_finished();
+          }
+        });
+    } else {
+      async_finished();
+    }
   }
   
 });
@@ -265,19 +284,20 @@ app.get('/auth/instagram',
   auth.passport.authenticate('instagram'));
 
 app.get('/auth/instagram/callback', 
-  auth.passport.authenticate('instagram', {successRedirect: '/connect', failureRedirect: '/accounts'}));
+  auth.passport.authenticate('instagram', {successRedirect: 'back', failureRedirect: '/accounts'}));
 
 app.get('/auth/facebook',
   auth.passport.authenticate('facebook', {scope: ['user_photos'] }));
 
-// TODO: Maybe show toast on successfull login
+// TODO: Redirect to error page on failureRedirect
 app.get('/auth/facebook/callback',
-  auth.passport.authenticate('facebook', {successRedirect: '/connect', failureRedirect: '/accounts'}));
+  auth.passport.authenticate('facebook', {successRedirect: 'back', failureRedirect: '/accounts'}));
 
 
+// TODO: Where to redirect?
 app.get('/disconnect', function(req, res) {
   req.logout();
-  res.redirect('/');
+  res.redirect('/connect');
 });
 
 

@@ -1,7 +1,9 @@
 var passport = require('passport');
+var dotenv = require('dotenv');
 var InstagramStrategy = require('passport-instagram').Strategy;
 var FacebookStrategy = require('passport-facebook').Strategy;
-var dotenv = require('dotenv');
+var Instagram = require('instagram-node-lib');
+var Facebook = require('fbgraph');
 
 var models = require('./models');
 
@@ -15,11 +17,13 @@ var FACEBOOK_APP_ID = process.env.facebook_app_id;
 var FACEBOOK_APP_SECRET = process.env.facebook_app_secret;
 var FACEBOOK_CALLBACK_URL = process.env.facebook_callback_url;
 
-exports.INSTAGRAM_CLIENT_ID = INSTAGRAM_CLIENT_ID;
-exports.INSTAGRAM_CLIENT_SECRET = INSTAGRAM_CLIENT_SECRET;
-
+// Setup instagram API
+Instagram.set('client_id', INSTAGRAM_CLIENT_ID);
+Instagram.set('client_secret', INSTAGRAM_CLIENT_SECRET);
 
 exports.passport = passport;
+exports.Instagram = Instagram;
+exports.Facebook = Facebook;
 
 // Passport session setup.
 //   To support persistent login sessions, Passport needs to be able to
