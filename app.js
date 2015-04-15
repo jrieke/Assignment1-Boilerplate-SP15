@@ -118,6 +118,7 @@ app.get('/', ensureAuthenticated, function(req, res) {
             var tempJSON = {};
             tempJSON.image_url = item.images.low_resolution.url;
             tempJSON.link = item.link;
+            tempJSON.provider = 'Instagram';
 
             if (item.caption) {
               tempJSON.caption = item.caption.text;
@@ -157,6 +158,7 @@ app.get('/', ensureAuthenticated, function(req, res) {
           var tempJSON = {};
           tempJSON.image_url = item.source;
           tempJSON.link = item.link;
+          tempJSON.provider = 'Facebook';
 
           if (item.name) {
             tempJSON.caption = item.name;

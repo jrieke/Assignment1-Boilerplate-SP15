@@ -1,7 +1,5 @@
 /* grid of responsive square images with centered text, adapted from http://stackoverflow.com/questions/20456694/grid-of-responsive-squares */
 
-/* TODO: Maybe use px values for margin and paddin */
-
 .square {
     float: left;
     position: relative;

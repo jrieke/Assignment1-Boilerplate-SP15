@@ -1,14 +1,13 @@
-<div class="container section">
+<div class="container">
   
-  <div class="row center-align">
+  <div class="row section center-align">
     <h3>Almost done</h3>
-    <p>You have connected this account:</p>
+    <p>You connected this account:</p>
   </div>
   
   {{#if facebook}}
-  <!-- TODO: Maybe do margin-bottom: 0 px on these rows -->
   <div class="row">
-    <div class="col s12 m10 offset-m1 l6 offset-l3">
+    <div class="col s12 m8 offset-m2 l6 offset-l3">
 
       <div class="card">
         <div class="card-content">              
@@ -30,7 +29,7 @@
 
   {{#if instagram}}
   <div class="row">
-    <div class="col s12 m10 offset-m1 l6 offset-l3">
+    <div class="col s12 m8 offset-m2 l6 offset-l3">
 
       <div class="card">
         <div class="card-content">          
@@ -50,9 +49,9 @@
   </div>
   {{/if}}
 
-  <div class="row">
-    <div class="col s6 offset-s3 right-align">
-      <a href="/" class="btn-flat waves-effect waves-red">Skip</a>&nbsp;&nbsp;
+  <div class="row section">
+    <div class="col s12 m8 offset-m2 l6 offset-l3 right-align">
+      <a href="/" class="btn-flat waves-effect waves-red">Skip</a>&nbsp;
       {{#unless facebook}}
       <a href="/auth/facebook" class="btn waves-effect blue">Connect Facebook</a>
       {{/unless}}
