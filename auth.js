@@ -4,6 +4,7 @@ var InstagramStrategy = require('passport-instagram').Strategy;
 var FacebookStrategy = require('passport-facebook').Strategy;
 var Instagram = require('instagram-node-lib');
 var Facebook = require('fbgraph');
+var country_language = require('country-language');
 
 var models = require('./models');
 
@@ -57,7 +58,7 @@ passport.use(new InstagramStrategy({
     process.nextTick(function() {
 
       if (!req.user) {
-        console.log("Signing up with Instagram");
+        console.log("Signing in with Instagram");
 
         models.User.findOne({'instagram.id': profile.id}, function(err, user) {
           if (err)
@@ -65,7 +66,16 @@ passport.use(new InstagramStrategy({
 
           // if the user is found, then log them in
           if (user) {
-            return done(null, user); // user found, return that user
+            if (updateInstagramInformation(user, profile)) {
+              user.save(function(err) {
+                if (err)
+                  return handleError(err);
+
+                return done(null, user);
+              });
+            } else {
+              return done(null, user); // user found, return that user
+            }
           } else {
             // if there is no user found with that facebook id, create them
             // console.log("Creating new user for Instagram profile:");
@@ -73,10 +83,10 @@ passport.use(new InstagramStrategy({
             var newUser = new models.User();
 
             // set all of the facebook information in our user model
-            newUser.instagram.id = profile.id; // set the users facebook id                   
-            newUser.instagram.name = profile.username;
+            newUser.instagram.id = profile.id; // set the users facebook id
             newUser.instagram.access_token = accessToken; // we will save the token that facebook provides to the user                    
-            
+            updateInstagramInformation(user, profile);
+
             // console.log("New user:");
             // console.log(newUser);
 
@@ -91,10 +101,6 @@ passport.use(new InstagramStrategy({
           }
         });
 
-
-      
-        
-
       } else {
         // console.log("connecting Instagram");
         // console.log("User in session:");
@@ -107,10 +113,11 @@ passport.use(new InstagramStrategy({
           if (err)
             return done(err);
 
+          // TODO: Maybe refactor this and the stuff above to extra variables
           // TODO: Maybe add check if user was found, but actually not needed as the user is searched by its DB id
           user.instagram.id = profile.id;
-          user.instagram.name = profile.username;
           user.instagram.access_token = accessToken;
+          updateInstagramInformation(user, profile);
           user.save(function(err) {
             if (err)
               return handleError(err);
@@ -126,7 +133,29 @@ passport.use(new InstagramStrategy({
   }
 ));
 
-// TODO: Refactor this stuff to auth.js
+
+function updateInstagramInformation(user, profile) {
+  var anythingChanged = false;
+
+  var name = profile.username;
+
+  if (user.instagram.name != name) {
+    user.instagram.name = name;
+    anythingChanged = true;
+  }
+
+  var description = profile._json.data.bio;
+  if (user.instagram.description != description) {
+    user.instagram.description = description;
+    anythingChanged = true;
+  }
+
+  return anythingChanged;
+}
+
+
+
+
 passport.use(new FacebookStrategy({
     clientID: FACEBOOK_APP_ID,
     clientSecret: FACEBOOK_APP_SECRET,
@@ -141,8 +170,9 @@ passport.use(new FacebookStrategy({
     process.nextTick(function() {
 
       if (!req.user) {
-        console.log("Signing up with FB");
+        console.log("Signing in with Facebook");
         // user is not logged in yet
+        // console.log(profile);
 
         models.User.findOne({'facebook.id': profile.id}, function(err, user) {
 
@@ -153,7 +183,17 @@ passport.use(new FacebookStrategy({
 
           // if the user is found, then log them in
           if (user) {
-            return done(null, user); // user found, return that user
+            if (updateFacebookInformation(user, profile)) {
+              // Only affect database record if anything was changed
+              user.save(function(err) {
+                if (err)
+                  return handleError(err);
+
+                return done(null, user);
+              });
+            } else {
+              return done(null, user);
+            }
           } else {
             // if there is no user found with that facebook id, create them
             var newUser = new models.User();
@@ -162,10 +202,10 @@ passport.use(new FacebookStrategy({
             // console.log(profile);
 
             // set all of the facebook information in our user model
-            newUser.facebook.id = profile.id; // set the users facebook id                   
-            newUser.facebook.name = profile.displayName;
+            newUser.facebook.id = profile.id; // set the users facebook id
             newUser.facebook.access_token = accessToken; // we will save the token that facebook provides to the user                    
-            
+            updateFacebookInformation(newUser, profile);
+
             // console.log("New user:");
             // console.log(newUser);
 
@@ -193,8 +233,8 @@ passport.use(new FacebookStrategy({
             return done(err);
 
           user.facebook.id = profile.id;
-          user.facebook.name = profile.displayName;
           user.facebook.access_token = accessToken;
+          updateFacebookInformation(user, profile);
 
           user.save(function(err) {
             if (err)
@@ -206,3 +246,36 @@ passport.use(new FacebookStrategy({
     });
   }
 ));
+
+function updateFacebookInformation(user, profile) {
+  var anythingChanged = false;
+
+  var name = profile.displayName;
+  if (user.facebook.name != name) {
+    user.facebook.name = name;
+    anythingChanged = true;
+  }
+
+  var description = capitalizeFirstLetter(profile._json.gender);
+  var country = country_language.getCountry(profile._json.locale.slice(3)).name;
+  if (country) {
+    if (description)
+      description += ", from ";
+    else
+      description += "From ";
+    description += country;
+  }
+  if (user.facebook.description != description) {
+    user.facebook.description = description;
+    anythingChanged = true;
+  }
+
+  return anythingChanged;
+}
+
+
+// TODO: Maybe refactor to helpers.js
+// Helper functions
+function capitalizeFirstLetter(string) {
+  return string.charAt(0).toUpperCase() + string.slice(1);
+}

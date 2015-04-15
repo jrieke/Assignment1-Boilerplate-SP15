@@ -12,7 +12,6 @@ var flash = require('connect-flash');
 var app = express();
 
 //local dependencies
-var models = require('./models');
 var auth = require('./auth');
 // TODO: Maybe rename these
 var Instagram = auth.Instagram;
@@ -218,62 +217,64 @@ app.get('/', ensureAuthenticated, function(req, res) {
 
 
 app.get('/connect', function(req, res) {
-  console.log("Got call to connect");
+  // console.log("Got call to connect");
   if (!req.isAuthenticated()) {
+    // TODO: Should this be rendered here or in ensureAuthenticated?
     res.render('not_logged_in');
   } else {
 
-    var facebook, instagram;
+    // var facebook, instagram;
 
-    var async_finished = _.after(2, function() {
-      console.log("Rendering, this is the user:");
-      console.log(req.user);
-      if (facebook && instagram)
-        res.render('all_connected', {facebook: facebook, instagram: instagram});
-      else if (facebook)
-        res.render('facebook_connected', {facebook: facebook});
-      else if (instagram)
-        res.render('instagram_connected', {instagram: instagram});
-      });
+    // var async_finished = _.after(2, function() {
+      // console.log("Rendering, this is the user:");
+      // console.log(req.user);
+      if (req.user.facebook && req.user.instagram)
+        res.render('all_connected', {facebook: req.user.facebook, instagram: req.user.instagram});
+      else if (req.user.facebook)
+        // TODO: Maybe refactor this to a single file 'partially_connected'
+        res.render('facebook_connected', {facebook: req.user.facebook});
+      else if (req.user.instagram)
+        res.render('instagram_connected', {instagram: req.user.instagram});
+      // });
 
-    if (req.user.facebook) {
-      facebook = {
-        name: req.user.facebook.name
-      };    
+    // if (req.user.facebook) {
+    //   facebook = {
+    //     name: req.user.facebook.name
+    //   };    
 
-      Facebook.get('/me?fields=age_range,gender&access_token=' + req.user.facebook.access_token,
-        function(err, response) {
-          // console.log("got user data from FB:");
-          // console.log(response);
-          var description = '';
-          if (response.gender)
-            description += capitalizeFirstLetter(response.gender) + ', ';
-          if (response.age_range) 
-            description += response.age_range.min + '+ years old';
-          facebook.description = description;
-          async_finished();
-        });
-    } else {
-      async_finished();
-    }
+    //   Facebook.get('/me?fields=age_range,gender&access_token=' + req.user.facebook.access_token,
+    //     function(err, response) {
+    //       // console.log("got user data from FB:");
+    //       // console.log(response);
+    //       var description = '';
+    //       if (response.gender)
+    //         description += capitalizeFirstLetter(response.gender) + ', ';
+    //       if (response.age_range) 
+    //         description += response.age_range.min + '+ years old';
+    //       facebook.description = description;
+    //       async_finished();
+    //     });
+    // } else {
+    //   async_finished();
+    // }
 
-    if (req.user.instagram) {
-      instagram = {
-        name: req.user.instagram.name
-      };
+    // if (req.user.instagram) {
+    //   instagram = {
+    //     name: req.user.instagram.name
+    //   };
 
-      Instagram.users.info({
-        user_id: req.user.instagram.id,
-        complete: function(data) {
-            // console.log("got user data from Instagram:");
-            // console.log(data);
-            instagram.description = data.bio;
-            async_finished();
-          }
-        });
-    } else {
-      async_finished();
-    }
+    //   Instagram.users.info({
+    //     user_id: req.user.instagram.id,
+    //     complete: function(data) {
+    //         // console.log("got user data from Instagram:");
+    //         // console.log(data);
+    //         instagram.description = data.bio;
+    //         async_finished();
+    //       }
+    //     });
+    // } else {
+    //   async_finished();
+    // }
   }
   
 });
@@ -305,6 +306,7 @@ http.createServer(app).listen(app.get('port'), function() {
     console.log('Express server listening on port ' + app.get('port'));
 });
 
+// TODO: Delete
 // Helper functions
 function capitalizeFirstLetter(string) {
   return string.charAt(0).toUpperCase() + string.slice(1);

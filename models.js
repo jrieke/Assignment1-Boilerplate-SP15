@@ -5,11 +5,13 @@ var userSchema = mongoose.Schema({
 	facebook: {
         id: String,
         name: String,
+        description: String,
         access_token: String
     },
     instagram: {
     	id: String,
     	name: String,
+        description: String,
     	access_token: String
     }
 });
