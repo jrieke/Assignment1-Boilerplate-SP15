@@ -1,9 +1,10 @@
 <div class="container section">
-
+  
   <div class="row center-align">
-    <h3>Your accounts</h3>
+    <h3>Almost done</h3>
+    <p>You have connected this account:</p>
   </div>
-
+  
   {{#if facebook}}
   <!-- TODO: Maybe do margin-bottom: 0 px on these rows -->
   <div class="row">
@@ -51,14 +52,14 @@
 
   <div class="row">
     <div class="col s6 offset-s3 right-align">
+      <a href="/" class="btn-flat waves-effect waves-red">Skip</a>&nbsp;&nbsp;
       {{#unless facebook}}
-      <a href="/auth/facebook" class="btn waves-effect blue">Connect Facebook</a>&nbsp;&nbsp;
+      <a href="/auth/facebook" class="btn waves-effect blue">Connect Facebook</a>
       {{/unless}}
       {{#unless instagram}}
-      <a href="/auth/instagram" class="btn waves-effect brown">Connect Instagram</a>&nbsp;&nbsp;
+      <a href="/auth/instagram" class="btn waves-effect brown">Connect Instagram</a>
       {{/unless}}
-      <a href="/disconnect" class="btn waves-effect red">Disconnect</a>
-    </div>      
+    </div>
   </div>
-  
+
 </div>

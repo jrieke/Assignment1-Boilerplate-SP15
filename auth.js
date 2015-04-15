@@ -69,7 +69,7 @@ passport.use(new InstagramStrategy({
             if (updateInstagramInformation(user, profile)) {
               user.save(function(err) {
                 if (err)
-                  return handleError(err);
+                  return done(err);
 
                 return done(null, user);
               });
@@ -85,7 +85,7 @@ passport.use(new InstagramStrategy({
             // set all of the facebook information in our user model
             newUser.instagram.id = profile.id; // set the users facebook id
             newUser.instagram.access_token = accessToken; // we will save the token that facebook provides to the user                    
-            updateInstagramInformation(user, profile);
+            updateInstagramInformation(newUser, profile);
 
             // console.log("New user:");
             // console.log(newUser);
@@ -93,7 +93,7 @@ passport.use(new InstagramStrategy({
             // save our user to the database
             newUser.save(function(err) {
               if (err)
-                return handleError(err);
+                return done(err);
 
               // if successful, return the new user
               return done(null, newUser);
@@ -120,7 +120,7 @@ passport.use(new InstagramStrategy({
           updateInstagramInformation(user, profile);
           user.save(function(err) {
             if (err)
-              return handleError(err);
+              return done(err);
             return done(null, user);
           });
 
@@ -187,7 +187,7 @@ passport.use(new FacebookStrategy({
               // Only affect database record if anything was changed
               user.save(function(err) {
                 if (err)
-                  return handleError(err);
+                  return done(err);
 
                 return done(null, user);
               });
@@ -212,7 +212,7 @@ passport.use(new FacebookStrategy({
             // save our user to the database
             newUser.save(function(err) {
               if (err)
-                throw err;
+                return done(err);
 
               // if successful, return the new user
               return done(null, newUser);
@@ -238,7 +238,7 @@ passport.use(new FacebookStrategy({
 
           user.save(function(err) {
             if (err)
-              handleError(err);
+              return done(err);
             return done(null, user);
           });
         });
