@@ -1,6 +1,6 @@
 var mongoose = require('mongoose');
-// var findOrCreate = require('mongoose-findorcreate');
 
+// Schema for database record of user
 var userSchema = mongoose.Schema({
 	facebook: {
         id: String,
@@ -16,7 +16,4 @@ var userSchema = mongoose.Schema({
     }
 });
 
-// userSchema.plugin(findOrCreate);
-
 exports.User = mongoose.model('User', userSchema);
-

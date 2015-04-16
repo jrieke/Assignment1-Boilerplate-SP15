@@ -1,4 +1,3 @@
-//dependencies for each module used
 var express = require('express');
 var http = require('http');
 var path = require('path');
@@ -8,16 +7,13 @@ var session = require('express-session');
 var cookieParser = require('cookie-parser');
 var mongoose = require('mongoose');
 var _ = require('lodash');
-var flash = require('connect-flash');
 var app = express();
 
-//local dependencies
 var auth = require('./auth');
-// TODO: Maybe rename these
 var Instagram = auth.Instagram;
 var Facebook = auth.Facebook;
 
-//connect to database
+// Connect to database
 mongoose.connect(process.env.mongodb_connection_url);
 var db = mongoose.connection;
 db.on('error', console.error.bind(console, 'connection error:'));
@@ -26,7 +22,7 @@ db.once('open', function (callback) {
 });
 
 
-//Configures the Template engine
+// Express app configuration
 app.engine('handlebars', handlebars({defaultLayout: 'layout'}));
 app.set('view engine', 'handlebars');
 app.set('views', __dirname + '/views');
@@ -37,18 +33,15 @@ app.use(cookieParser());
 app.use(session({ secret: 'keyboard cat',
                   saveUninitialized: true,
                   resave: true}));
-app.use(flash());
 app.use(auth.passport.initialize());
 app.use(auth.passport.session());
 
 //set environment ports and start application
 app.set('port', process.env.PORT || 3000);
 
-// Simple route middleware to ensure user is authenticated.
-//   Use this route middleware on any resource that needs to be protected.  If
-//   the request is authenticated (typically via a persistent login session),
-//   the request will proceed.  Otherwise, the user will be redirected to the
-//   login page.
+/*
+ * Route middleware that redirects to /connect if the user is not logged in
+ */
 function ensureAuthenticated(req, res, next) {
   if (req.isAuthenticated()) {
     return next(); 
@@ -58,37 +51,53 @@ function ensureAuthenticated(req, res, next) {
 }
 
 
+/*
+ * Show different login views depending on which accounts the user has already connected
+ * The user will stay on this route until he has connected at least one account
+ */
 app.get('/connect', function(req, res) {
   if (!req.isAuthenticated()) {
     res.render('not_connected');
   } else {
     if (req.user.facebook && req.user.instagram)
       res.render('completely_connected', {facebook: req.user.facebook, instagram: req.user.instagram});
-    else  // only one of them
+    else  // only one of Facebook and Instagram
       res.render('partially_connected', {facebook: req.user.facebook, instagram: req.user.instagram});
   }  
 });
 
 
+/*
+ * Disconnect all user accounts and redirect to /connect
+ */
 app.get('/disconnect', function(req, res) {
   req.logout();
   res.redirect('/connect');
 });
 
 
+/*
+ * Show an overview of the connected accounts plus the possibility to connect new ones or disconnect at all
+ */
 app.get('/accounts', ensureAuthenticated, function(req, res) {
   res.render('accounts', {facebook: req.user.facebook, instagram: req.user.instagram});
 });
 
 
+/*
+ * Main route
+ * Get photos from the user's Facebook and Instagram accounts, filter the ones where he is tagged on
+ * and show them (with some metadata) in a grid
+ */
 app.get('/', ensureAuthenticated, function(req, res) {
-  var user = req.user;
   var imageArr = [];
 
+  // Render the page after the two asynchronous API calls have finished
   var async_finished = _.after(2, function() {
       if (imageArr.length === 0) {
         res.render('no_photos');
       } else {
+        // Sort the images chronologically
         imageArr.sort(function(a, b) {
           return b.timestamp - a.timestamp;
         });
@@ -97,24 +106,21 @@ app.get('/', ensureAuthenticated, function(req, res) {
     });
 
   if (req.user.instagram) {
-    // console.log("getting instagram");
+    // Get photos from Instagram
     Instagram.users.self({
       access_token: req.user.instagram.access_token,
       complete: function(data) {
-        // console.log("got data from instagram:");
-        // console.log(data);
         for (var i = 0; i < data.length; i++) {
           var item = data[i];
 
-          // TODO: Maybe use positon of tag and show an overlay on the photo
-          var user_names = item.users_in_photo.map(function(user_item) {
-            return user_item.user.username;
+          // Get all the users that were tagged on this photo
+          var user_ids = item.users_in_photo.map(function(user_item) {
+            return user_item.user.id;
           });
-          // console.log(user_names);
 
-          // TODO: Use user id instead
-          if (user_names.indexOf(req.user.instagram.name) != -1) {
-            // current user is tagged in the photo
+          if (user_ids.indexOf(req.user.instagram.id) != -1) {
+            // Current user is tagged on this photo
+            // Get some metadata about the photo and save it all to 'imageArr'
             var tempJSON = {};
             tempJSON.image_url = item.images.low_resolution.url;
             tempJSON.link = item.link;
@@ -125,6 +131,7 @@ app.get('/', ensureAuthenticated, function(req, res) {
             } else {
               tempJSON.caption = null;
             }
+
             if (item.user.id == req.user.instagram.id) {
               tempJSON.from = 'You';
             } else {
@@ -136,6 +143,7 @@ app.get('/', ensureAuthenticated, function(req, res) {
             tempJSON.day = date.getDate();
             tempJSON.month = date.getMonth() + 1;
             tempJSON.year = date.getFullYear();
+
             imageArr.push(tempJSON);
           }
         }
@@ -148,13 +156,14 @@ app.get('/', ensureAuthenticated, function(req, res) {
   
 
   if (req.user.facebook) {
+    // Get photos from Facebook
+    // These are already the ones where the user was tagged on, so we do not need to filter
     Facebook.get('/me/photos?access_token=' + req.user.facebook.access_token, 
       function(err, response) {
         for (var i = 0; i < response.data.length; i++) {
-          // Facebook already gives the photos the user was tagged on, so we will show each one
-
           var item = response.data[i];
 
+          // Get some metadata about the photo and save it all to 'imageArr'
           var tempJSON = {};
           tempJSON.image_url = item.source;
           tempJSON.link = item.link;
@@ -173,7 +182,6 @@ app.get('/', ensureAuthenticated, function(req, res) {
 
           var date = new Date(item.created_time);
           tempJSON.timestamp = date.getTime();
-          // console.log(date.getDay() + "." + date.getMonth() + "." + date.getYear());
           tempJSON.day = date.getDate();
           tempJSON.month = date.getMonth() + 1;
           tempJSON.year = date.getFullYear();
@@ -187,11 +195,17 @@ app.get('/', ensureAuthenticated, function(req, res) {
 });
 
 
+/*
+ * Simple error page with a button that redirects to /
+ */
 app.get('/error', function(req, res) {
   res.render('error');
 });
 
 
+/*
+ * Routes for Instagram and Facebook authentication
+ */
 app.get('/auth/instagram',
   auth.passport.authenticate('instagram'));
 
@@ -205,6 +219,7 @@ app.get('/auth/facebook/callback',
   auth.passport.authenticate('facebook', {successRedirect: 'back', failureRedirect: '/error'}));
 
 
+// Start the server and go
 http.createServer(app).listen(app.get('port'), function() {
     console.log('Express server listening on port ' + app.get('port'));
 });
