@@ -1,7 +1,10 @@
-Instagram Example
+All My Pics
 ===========
 
-Discussion 1:
+Assignment 1 for COGS 121 at UCSD (Spring 2015)
 
-Instagram example for COGS 121
-Every commit will provide a step by step introduction to creating a web application overview.
+This website shows all the photos a user was tagged on. The user can connect his Instagram and Facebook accounts (separately or simultanousely). The site then pulls the user's photos through the Instagram API and/or the Facebook Graph API, filters the photos the user himself was tagged on and shows them (together with some metadata).
+
+Backend: node.js
+Authentication: passport.js
+Layout and Style: Materialize
