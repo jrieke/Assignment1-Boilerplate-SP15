@@ -102,7 +102,7 @@ app.get('/', ensureAuthenticated, function(req, res) {
         imageArr.sort(function(a, b) {
           return b.timestamp - a.timestamp;
         });
-        res.render('browse', {photos: imageArr});            
+        res.render('photos', {photos: imageArr});            
       }
     });
 
