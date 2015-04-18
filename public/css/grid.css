@@ -3,9 +3,11 @@
 .square {
     float: left;
     position: relative;
-    width: 24%;
-    padding-bottom: 24%; /* = width for a 1:1 aspect ratio */
-    margin: 0.5%;
+    /*width: 24%;*/
+    /*padding-bottom: 24%;*/ /* = width for a 1:1 aspect ratio */
+    /*margin: 0.5%;*/
+    width: 25%;
+    padding-bottom: 25%;
     background-position: center center;
     background-repeat: no-repeat;
     background-size: cover; /* you change this to "contain" if you don't want the images to be cropped */
@@ -14,15 +16,19 @@
 
 @media screen and (max-width: 1000px) {
   .square {
-    width: 32.3%;
-    padding-bottom: 32.3%;
+    /*width: 32.3%;
+    padding-bottom: 32.3%;*/
+    width: 33.3%;
+    padding-bottom: 33.3%;
   }
 }
 
 @media screen and (max-width: 500px) {
   .square {
-    width: 49%;
-    padding-bottom: 49%;
+    width: 50%;
+    padding-bottom: 50%;
+    /*width: 49%;
+    padding-bottom: 49%;*/
   }
 }
 

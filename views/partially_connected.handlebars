@@ -1,3 +1,5 @@
+{{> transparent_navbar }}
+
 <div class="container">
   
   <div class="row section center-align">
@@ -9,19 +11,7 @@
   <div class="row">
     <div class="col s12 m8 offset-m2 l6 offset-l3">
 
-      <div class="card">
-        <div class="card-content">              
-          <div class="row valign-wrapper" style="margin-bottom: 0px">
-            <div class="col s3">
-              <img src="images/facebookCircle.png" alt="FB" class="responsive-img">
-            </div>
-            <div class="col s9">
-              <span class="card-title black-text">{{facebook.name}}</span>
-              <p class="truncate">{{facebook.description}}</p>
-            </div>                
-          </div>
-        </div>
-      </div>
+      {{> account_card logo='facebook' account=facebook}}
 
     </div>
   </div>
@@ -31,19 +21,7 @@
   <div class="row">
     <div class="col s12 m8 offset-m2 l6 offset-l3">
 
-      <div class="card">
-        <div class="card-content">          
-          <div class="row valign-wrapper" style="margin-bottom: 0px">
-            <div class="col s3">
-              <img src="images/instagramCircle.png" alt="IG" class="responsive-img">
-            </div>
-            <div class="col s9">
-              <span class="card-title black-text">{{instagram.name}}</span>
-              <p class="truncate">{{instagram.description}}</p>
-            </div>
-          </div>
-        </div>
-      </div>
+      {{> account_card logo='instagram' account=instagram}}
 
     </div>
   </div>

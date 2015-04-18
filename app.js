@@ -25,7 +25,8 @@ db.once('open', function (callback) {
 // Express app configuration
 app.engine('handlebars', handlebars({defaultLayout: 'layout'}));
 app.set('view engine', 'handlebars');
-app.set('views', __dirname + '/views');
+// app.set('views', __dirname + '/views');
+// app.set('partials', path.join(__dirname, 'views', 'partials'));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
