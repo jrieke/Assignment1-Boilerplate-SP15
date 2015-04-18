@@ -1,11 +1,8 @@
-/* grid of responsive square images with centered text, adapted from http://stackoverflow.com/questions/20456694/grid-of-responsive-squares */
+/* Grid of responsive square images with overlays and centered text, adapted from http://stackoverflow.com/questions/20456694/grid-of-responsive-squares */
 
 .square {
     float: left;
     position: relative;
-    /*width: 24%;*/
-    /*padding-bottom: 24%;*/ /* = width for a 1:1 aspect ratio */
-    /*margin: 0.5%;*/
     width: 25%;
     padding-bottom: 25%;
     background-position: center center;
@@ -16,8 +13,6 @@
 
 @media screen and (max-width: 1000px) {
   .square {
-    /*width: 32.3%;
-    padding-bottom: 32.3%;*/
     width: 33.3%;
     padding-bottom: 33.3%;
   }
@@ -27,8 +22,6 @@
   .square {
     width: 50%;
     padding-bottom: 50%;
-    /*width: 49%;
-    padding-bottom: 49%;*/
   }
 }
 

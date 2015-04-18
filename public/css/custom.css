@@ -1,3 +1,4 @@
+/* Remove margin below rows in Materialize */
 .row {
 	margin-bottom: 0px
 }

@@ -23,10 +23,8 @@ db.once('open', function (callback) {
 
 
 // Express app configuration
-app.engine('handlebars', handlebars({defaultLayout: 'layout'}));
+app.engine('handlebars', handlebars({defaultLayout: 'layout_with_background_image'}));
 app.set('view engine', 'handlebars');
-// app.set('views', __dirname + '/views');
-// app.set('partials', path.join(__dirname, 'views', 'partials'));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
@@ -78,7 +76,7 @@ app.get('/disconnect', function(req, res) {
 
 
 /*
- * Show an overview of the connected accounts plus the possibility to connect new ones or disconnect at all
+ * Show an overview of the connected accounts plus the possibility to connect new ones or disconnect completely
  */
 app.get('/accounts', ensureAuthenticated, function(req, res) {
   res.render('accounts', {facebook: req.user.facebook, instagram: req.user.instagram});
@@ -102,7 +100,7 @@ app.get('/', ensureAuthenticated, function(req, res) {
         imageArr.sort(function(a, b) {
           return b.timestamp - a.timestamp;
         });
-        res.render('photos', {photos: imageArr});            
+        res.render('photos', {photos: imageArr, layout: 'layout_without_background_image'});            
       }
     });
 

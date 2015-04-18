@@ -8,7 +8,7 @@ var country_language = require('country-language');
 
 var models = require('./models');
 
-// Load keys for Instagram and Facebook from .env file
+// Load environment variables from .env file
 dotenv.load();
 
 // Setup Instagram API
@@ -50,13 +50,7 @@ passport.use(new FacebookStrategy({
           if (user) {  // Database record for this Facebook account exists, just update it
             return updateFacebookInformation(user, profile, accessToken, done);
           } else {  // Create a new database record
-            var us = new models.User();
-            updateFacebookInformation(us, profile, accessToken, done);
-            // us.save(function(err) {
-            //   if (err)
-            //     return done(err);
-            //   return done(null, us);
-      // });
+            updateFacebookInformation(new models.User(), profile, accessToken, done);
           }
         });
 
